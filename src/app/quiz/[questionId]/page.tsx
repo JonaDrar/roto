@@ -29,7 +29,7 @@ export default function QuizPage() {
   const questionIdParam = params.questionId as string;
 
   const [userData, setUserData] = useLocalStorageState<UserData>('quizUserData', initialUserData);
-  const [currentQuestion, setCurrentQuestion] = useState<QuestionType | null>(null);
+  const [currentQuestionData, setCurrentQuestionData] = useState<QuestionType | null>(null);
   const [isClient, setIsClient] = useState(false);
   const [animationClass, setAnimationClass] = useState('animate-in fade-in-0 slide-in-from-right-12 duration-500');
   const [questionId, setQuestionId] = useState<number | null>(null);
@@ -38,28 +38,40 @@ export default function QuizPage() {
   useEffect(() => {
     setIsClient(true);
     const id = parseInt(questionIdParam);
-    setQuestionId(id);
-  }, [questionIdParam]);
-  
+    if (!isNaN(id)) {
+      setQuestionId(id);
+    } else {
+      // Handle invalid questionIdParam early, e.g., redirect or show error
+      router.replace('/');
+    }
+  }, [questionIdParam, router]);
+
   useEffect(() => {
     if (!isClient || questionId === null) return;
 
     if (isNaN(questionId) || questionId < 1 || questionId > TOTAL_QUESTIONS) {
-      router.replace('/'); 
+      router.replace('/');
       return;
     }
-    const q = questions.find(q => q.id === questionId);
-    setCurrentQuestion(q || null);
     
     if (userData.name === '') {
         router.replace('/');
-    } else {
+        return;
+    }
+    
+    const q = questions.find(q => q.id === questionId);
+    setCurrentQuestionData(q || null);
+    
+    // Only update userData.currentQuestion if it's different from the current route's questionId
+    // This prevents a loop if setUserData causes a re-render but questionId hasn't changed.
+    if (userData.currentQuestion !== questionId) {
         setUserData(prev => ({ ...prev, currentQuestion: questionId }));
     }
+    
     // Reset animation class for incoming question
     setAnimationClass('animate-in fade-in-0 slide-in-from-right-12 duration-500');
 
-  }, [questionId, router, userData.name, setUserData, isClient]);
+  }, [isClient, questionId, router, userData.name, userData.currentQuestion, setUserData]);
 
 
   const handleAnswer = (answer: 'yes' | 'no') => {
@@ -91,7 +103,7 @@ export default function QuizPage() {
     }
   };
 
-  if (!isClient || !currentQuestion || !userData.name || questionId === null) {
+  if (!isClient || !currentQuestionData || !userData.name || questionId === null) {
     return (
         <div className="flex flex-col items-center justify-center mt-10">
         <Card className="w-full max-w-lg shadow-xl">
@@ -129,7 +141,7 @@ export default function QuizPage() {
         </CardHeader>
         <CardContent className="min-h-[120px] flex items-center justify-center p-6">
           <p className="text-lg sm:text-xl text-center font-medium text-foreground">
-            {currentQuestion.text}
+            {currentQuestionData.text}
           </p>
         </CardContent>
         <CardFooter className="flex flex-col sm:flex-row justify-center gap-4 p-6 border-t">
