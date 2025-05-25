@@ -1,12 +1,4 @@
-
 "use server";
-
-// This is a mock in-memory store. In a real application, you'd use a database.
-let mockLeaderboard: { id: string; name: string; score: number; createdAt: Date }[] = [
-    { id: "1", name: "Elena Ejemplo", score: 85, createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2) },
-    { id: "2", name: "Carlos Pruebas", score: 92, createdAt: new Date(Date.now() - 1000 * 60 * 30) },
-    { id: "3", name: "Ana Demo", score: 50, createdAt: new Date() },
-];
 
 export interface LeaderboardEntry {
   id: string;
@@ -20,37 +12,41 @@ export async function saveResult(
   name: string,
   score: number
 ): Promise<{ success: boolean; message?: string }> {
-  console.log(`Server Action: Saving result for ${name} with score ${score}`);
-  // Simulate saving to a database
-  // Prevent duplicate entries for the same user if they replay quickly, update instead (simplified)
-  const existingEntryIndex = mockLeaderboard.findIndex(entry => entry.name.toLowerCase() === name.toLowerCase());
-  if (existingEntryIndex !== -1) {
-    // Update if new score is higher or simply update timestamp
-    if (score >= mockLeaderboard[existingEntryIndex].score) {
-         mockLeaderboard[existingEntryIndex] = { ...mockLeaderboard[existingEntryIndex], score, createdAt: new Date() };
-    }
-  } else {
-    const newEntry = { id: String(Date.now()) + name, name, score, createdAt: new Date() };
-    mockLeaderboard.push(newEntry);
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/submit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, percentage: score }),
+      cache: 'no-store'
+    });
+
+    if (!res.ok) throw new Error('Failed to save result');
+    return { success: true, message: "Resultado guardado correctamente." };
+  } catch (error) {
+    console.error("Error al guardar resultado:", error);
+    return { success: false, message: "Error al guardar resultado." };
   }
-  
-  // In a real app, handle potential errors during DB operation
-  return { success: true, message: "Resultado guardado (simulado)." };
 }
 
 export async function getRankings(): Promise<LeaderboardEntry[]> {
-  console.log("Server Action: Fetching rankings");
-  // Simulate fetching from a database
-  // Sort by score descending, then by date ascending for ties
-  const sortedLeaderboard = [...mockLeaderboard].sort((a, b) => {
-    if (b.score !== a.score) {
-      return b.score - a.score;
-    }
-    return a.createdAt.getTime() - b.createdAt.getTime();
-  });
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/ranking`, {
+      method: 'GET',
+      cache: 'no-store'
+    });
 
-  return sortedLeaderboard.map((entry, index) => ({
-    ...entry,
-    rank: index + 1,
-  }));
+    if (!res.ok) throw new Error('Failed to fetch ranking');
+    const data = await res.json();
+
+    return data.map((entry: any, index: number) => ({
+      id: entry.id?.toString() || `${entry.name}-${index}`,
+      name: entry.name,
+      score: entry.rotura_percentage || entry.score,
+      createdAt: new Date(entry.created_at),
+      rank: index + 1
+    }));
+  } catch (error) {
+    console.error("Error al obtener ranking:", error);
+    return [];
+  }
 }

@@ -4,12 +4,12 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import useLocalStorageState from '@/hooks/useLocalStorageState';
-import { TOTAL_QUESTIONS } from '@/lib/questions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { saveResult } from '@/app/actions';
 import { useToast } from "@/hooks/use-toast";
 import { Award, BarChart3, RotateCcw } from 'lucide-react';
+import { TOTAL_QUESTIONS } from '@/lib/questions';
 
 interface UserData {
   name: string;
@@ -57,7 +57,7 @@ export default function ResultsPage() {
           .then(response => {
             if (response.success) {
               // Toast might be too intrusive here, let's assume it's fine.
-              // toast({ title: "Resultado Guardado", description: "Tu puntuación se ha guardado en el ranking (simulado)." });
+              toast({ title: "Resultado Guardado", description: "Tu puntuación se ha guardado en el ranking (simulado)." });
             } else {
               toast({ title: "Error al Guardar", description: response.message || "No se pudo guardar el resultado.", variant: "destructive" });
             }
